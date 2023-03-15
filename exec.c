@@ -8,8 +8,8 @@
 int main()
 {
 	char *argv[3];
-	argv[0] = "echo";
-	argv[1] = "hello";
+	argv[0] = "ls";
+	argv[1] = "-al";
 	argv[2] = 0;
 
 	int status;
@@ -21,12 +21,12 @@ int main()
 		printf("child %d is done\n", pid);
 	} else if (pid == 0){
 		printf("child: exiting\n");
-
-		execve("/bin/echo", argv);
+	
+		execve("/bin/ls", argv, NULL);
 	} else {
 		printf("fork error\n");
 	}
-
+	
 	return 0;
 }
 
