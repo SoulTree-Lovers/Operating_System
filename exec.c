@@ -9,8 +9,8 @@ int main()
 {
 	char *argv[3];
 	argv[0] = "ls";
-	argv[1] = "-al";
-	argv[2] = 0;
+	argv[1] = 0;
+	//argv[2] = 0;
 
 	int status;
 	int pid = fork();
