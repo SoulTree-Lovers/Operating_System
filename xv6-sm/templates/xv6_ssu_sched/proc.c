@@ -1,3 +1,5 @@
+#define NULL ((void*) 0)
+
 #include "types.h"
 #include "defs.h"
 #include "param.h"
@@ -198,7 +200,14 @@ fork(void)
   }
 
   // 자식 프로세스의 우선순위에 부모 프로세스의 우선순위 입력
-  np->priority = curproc->priority; 
+  
+  // parent's priority가 15이상이면 2로 나눔
+  if (curproc->priority >= 15)
+	  np->priority = curproc->priority / 2;
+  // parent's priority가 15미만이면 1을 더함
+  else
+	  np->priority = curproc->priority + 1;
+  
 
   np->sz = curproc->sz;
   np->parent = curproc;
@@ -336,9 +345,16 @@ scheduler(void)
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
+
+	struct proc *next = NULL;
+
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->state != RUNNABLE)
-        continue;
+      if(p->state == RUNNABLE){
+	    if (next == NULL || p->priority < next->priority)
+		  next = p;
+	  }
+	  else
+	    continue;
 
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
@@ -346,8 +362,9 @@ scheduler(void)
       c->proc = p;
       switchuvm(p);
       p->state = RUNNING;
-
-      swtch(&(c->scheduler), p->context);
+	  
+	  if (next != NULL)
+        swtch(&(c->scheduler), p->context);
       switchkvm();
 
       // Process is done running for now.
