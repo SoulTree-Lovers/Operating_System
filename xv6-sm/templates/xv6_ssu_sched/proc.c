@@ -230,7 +230,11 @@ fork(void)
 
   release(&ptable.lock);
 
+  yield();
+
   return pid;
+
+  
 }
 
 // Exit the current process.  Does not return.
@@ -372,12 +376,13 @@ scheduler(void)
 	 
 	struct proc * minPriorityProc = 0;
     
+	// 최소값을 매번 초기화
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->state == RUNNABLE){
 		  if (minPriorityProc == 0){
 			  minPriorityProc = p;
 		  } else {
-			  if ((p->priority < minPriorityProc->priority) || (p->priority <= minPriorityProc->priority && p->nExec <= minPriorityProc->nExec))
+			  if (p->priority < minPriorityProc->priority)
 				  minPriorityProc = p;
 		  }
 		  // continue;
@@ -390,7 +395,6 @@ scheduler(void)
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
-	  minPriorityProc->nExec++;
       p = minPriorityProc;
 	  c->proc = p;
       switchuvm(p);

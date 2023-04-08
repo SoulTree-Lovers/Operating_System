@@ -22,7 +22,7 @@ int main(int argc, char **argv)
 			{
 				for (j=0; j<INNER_LOOP; j++)
 					dummy += PI*j;
-				printf(1, "In (HI), i = %d, dummy = %x, nice=%d\n", i, dummy, getnice(pid));
+				printf(1, "In (HI), i = %d, dummy = %x\n", i, dummy);
 			}	
 			pid = fork();
 			if (pid == 0) /* child-of-child, its priority must be 11 */
