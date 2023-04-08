@@ -90,6 +90,7 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
+  p->nExec = 0; // 실행횟수 초기화
 
   release(&ptable.lock);
 
@@ -199,6 +200,10 @@ fork(void)
     return -1;
   }
 
+
+  np->sz = curproc->sz;
+  np->parent = curproc;
+  *np->tf = *curproc->tf;
   // 자식 프로세스의 우선순위에 부모 프로세스의 우선순위 입력
   
   // parent's priority가 15이상이면 2로 나눔
@@ -207,13 +212,7 @@ fork(void)
   // parent's priority가 15미만이면 1을 더함
   else
 	  np->priority = curproc->priority + 1;
-  
-
-  np->sz = curproc->sz;
-  np->parent = curproc;
-  *np->tf = *curproc->tf;
-
-  // Clear %eax so that fork returns 0 in the child.
+    // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
 
   for(i = 0; i < NOFILE; i++)
@@ -337,8 +336,15 @@ scheduler(void)
 {
   struct proc *p;
   struct cpu *c = mycpu();
-  c->proc = 0;
   
+  //struct ptable ptable;
+  //int i, j;
+  //struct proc *ptr1, *ptr2, *temp;
+  
+  c->proc = 0;
+
+
+
   for(;;){
     // Enable interrupts on this processor.
     sti();
@@ -346,25 +352,51 @@ scheduler(void)
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
 
-	struct proc *next = NULL;
 
+	// bubble sort로 ptable을 정렬해보려 했지만 실패,,
+	//for (i=0; i<NPROC; i++)
+	//{
+	//	for (j=i+1; j<NPROC; j++)
+	//	{
+	//		if (ptable.proc[i].priority > ptable.proc[j].priority)
+	//		{
+	//			ptr1 = &ptable.proc[i];
+	//			ptr2 = &ptable.proc[j];
+
+	//			temp = ptr1;
+	//			ptr1 = ptr2;
+	//			ptr2 = temp;
+	//		}
+	//	}
+	//}
+	 
+	struct proc * minPriorityProc = 0;
+    
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->state == RUNNABLE){
-	    if (next == NULL || p->priority < next->priority)
-		  next = p;
+		  if (minPriorityProc == 0){
+			  minPriorityProc = p;
+		  } else {
+			  if ((p->priority < minPriorityProc->priority) || (p->priority <= minPriorityProc->priority && p->nExec <= minPriorityProc->nExec))
+				  minPriorityProc = p;
+		  }
+		  // continue;
 	  }
-	  else
-	    continue;
+	}
 
+
+	if (minPriorityProc)
+	{
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
-      c->proc = p;
+	  minPriorityProc->nExec++;
+      p = minPriorityProc;
+	  c->proc = p;
       switchuvm(p);
       p->state = RUNNING;
 	  
-	  if (next != NULL)
-        swtch(&(c->scheduler), p->context);
+      swtch(&(c->scheduler), p->context);
       switchkvm();
 
       // Process is done running for now.

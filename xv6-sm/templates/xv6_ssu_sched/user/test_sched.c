@@ -14,7 +14,7 @@ int main(int argc, char **argv)
 		int i,j;
 		printf(1, "=== TEST START ===\n");
 		setnice(pid, PRIO_BASE);
-
+		
 		pid = fork();
 		if (pid == 0)	/* Child, its priority must be 10 */
 		{
@@ -22,9 +22,8 @@ int main(int argc, char **argv)
 			{
 				for (j=0; j<INNER_LOOP; j++)
 					dummy += PI*j;
-				printf(1, "In (HI), i = %d, dummy = %x\n", i, dummy);
-			}
-			
+				printf(1, "In (HI), i = %d, dummy = %x, nice=%d\n", i, dummy, getnice(pid));
+			}	
 			pid = fork();
 			if (pid == 0) /* child-of-child, its priority must be 11 */
 			{
@@ -34,6 +33,7 @@ int main(int argc, char **argv)
 						dummy += PI*j;
 					printf(1, "In (MID), i = %d, dummy = %x\n", i, dummy);
 				}
+
 			}
 			else	/* Child */
 			{
@@ -43,6 +43,7 @@ int main(int argc, char **argv)
 						dummy += PI*j;
 					printf(1, "In (HI), i = %d, dummy = %x\n", i, dummy);
 				}
+				
 				wait();
 			}
 		}
@@ -54,6 +55,7 @@ int main(int argc, char **argv)
 					dummy += PI*j;
 				printf(1, "In (LO), i = %d, dummy = %x\n", i, dummy);
 			}
+
 			wait();
 			printf(1, "=== TEST DONE ===\n");
 		}
