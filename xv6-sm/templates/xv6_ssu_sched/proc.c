@@ -229,7 +229,8 @@ fork(void)
   np->state = RUNNABLE;
 
   release(&ptable.lock);
-
+  
+  // fork() 실행 후 프로세스 넘겨주기
   yield();
 
   return pid;
