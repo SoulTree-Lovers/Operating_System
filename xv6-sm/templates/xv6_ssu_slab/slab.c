@@ -122,6 +122,7 @@ void slabinit(){
 
 		// bitmap은 kalloc()으로 할당
 		stable.slab[i].bitmap = kalloc();
+		memset(stable.slab[i].bitmap, 0, 4096);
 
 		// 각 slab마다 slab cache 하나씩 할당 (최초 1 page는 있어야 작동 가능)
 		// stable.slab[i].page[0] = kalloc();
@@ -250,8 +251,8 @@ void kmfree(char *addr, int size){ // addr: free할 object의 주소값, size: o
 			// 기존 데이터 삭제를 위해 1로 채우기
 			memset(addr, 1, s->size);
 
-			s->num_free_objects += 1;
-			s->num_used_objects -= 1;
+			s->num_free_objects++;
+			s->num_used_objects--;
 
 			// bitmap 초기화
 			clear_bit(s->bitmap, i);

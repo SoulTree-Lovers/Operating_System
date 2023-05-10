@@ -211,7 +211,9 @@ void slabtest(){
 	{
 		for (int k=0; k<TESTSIZE/sizeof(int); k++)
 		{
+			cprintf("%d, %d, %d, %d\n", j, k, *(t[0][j]+k), start);		//YOU MAY USE THIS
 			if (*(t[0][j]+k) != start)
+	
 			{
 				pass = 0;
 				break;
