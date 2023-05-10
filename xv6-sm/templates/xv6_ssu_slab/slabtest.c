@@ -34,7 +34,8 @@ void slabtest(){
 	 * the literal string in the cprintf function
 	 */
 	cprintf("==== SLAB TEST ====\n");
-
+	
+	slabdump();
 	/* TIPS:
 	 *	You may debug your result with 
 	 * cprintf();
@@ -47,19 +48,29 @@ void slabtest(){
 	t[0][0] = (int*) kmalloc (TESTSIZE); 
 	*(t[0][0]) = counter;
 	counter++;
+	
+	slabdump();
 
 	cprintf( (*(t[0][0]) == start && numobj_slab(TESTSLABID) == 1) ? "OK\n":"WRONG\n");
 	kmfree ((char*) t[0][0], TESTSIZE);
 
-	/* TEST1: Single slab alloc: the size not equal to a power of 2. */
+	
+	slabdump();
+	
+	/* TEST2: Single slab alloc: the size not equal to a power of 2. */
 	cprintf("==== TEST2 =====\n");
 	start = counter;
 	t[0][0] = (int*) kmalloc (TESTSIZE-10); 
 	*(t[0][0]) = counter;
 	counter++;
 
+	slabdump();
+
 	cprintf( (*(t[0][0]) == start && numobj_slab(TESTSLABID) == 1) ? "OK\n":"WRONG\n");
 	kmfree ((char*) t[0][0], TESTSIZE);
+
+	
+	slabdump();
 
 	/* TEST3: Multiple slabs alloc */
 	cprintf("==== TEST3 =====\n");
@@ -75,6 +86,8 @@ void slabtest(){
 		}
 	}
 	
+
+
 	// CHECK 
 	pass = 1;
 	for (int i=0; i<NSLAB; i++)
@@ -91,12 +104,20 @@ void slabtest(){
 			start++;
 		}
 	}
+
+	slabdump();
+
 	cprintf( pass ? "OK\n" : "WRONG\n");	
+	
+	
+	
 	for (int i=0; i<NSLAB; i++)
 	{
 		int slabsize = 1 << (i+3); 
 		kmfree((char*) t[i][0], slabsize);
 	}
+
+	slabdump();
 
 	/* TEST4: Multiple slabs alloc2 */
 	cprintf("==== TEST4 =====\n");
@@ -109,7 +130,7 @@ void slabtest(){
 			t[i][j]	= (int*) kmalloc (slabsize); 
 			for (int k=0; k<slabsize/sizeof(int); k++)
 			{
-				memmove (t[i][j]+k, &counter, sizeof(int));
+
 				counter++;
 			}
 		}
@@ -133,6 +154,9 @@ void slabtest(){
 			}
 		}
 	}
+
+	slabdump();
+
 	cprintf( pass ? "OK\n" : "WRONG\n");	
 
 	for (int i=0; i<NSLAB; i++)
@@ -141,6 +165,8 @@ void slabtest(){
 		for (int j=0; j<MAXTEST; j++)
 			kmfree((char*) t[i][j], slabsize);
 	}
+
+	slabdump();
 
 	/* TEST5: ALLOC MORE THAN 100 PAGES */
 	cprintf("==== TEST5 =====\n");
@@ -156,6 +182,8 @@ void slabtest(){
 	}
 	tmp = (int*) kmalloc (TESTSIZE);
 	cprintf( (!tmp && numobj_slab (TESTSLABID) == MAXTEST) ? "OK\n" : "WRONG\n");	
+
+	slabdump();
 
 	/* TEST6: ALLOC AFTER FREE */
 	cprintf("==== TEST6 =====\n");
@@ -175,6 +203,8 @@ void slabtest(){
 		}
 	}
 	
+	slabdump();
+
 	// CHECK 
 	pass = 1;
 	for (int j=0; j<MAXTEST; j++)
@@ -192,5 +222,7 @@ void slabtest(){
 	cprintf( pass ? "OK\n" : "WRONG\n");	
 	for (int j=0; j<MAXTEST; j++)
 		kmfree((char*) t[0][j], TESTSIZE);
+
+	slabdump();
 }
 
