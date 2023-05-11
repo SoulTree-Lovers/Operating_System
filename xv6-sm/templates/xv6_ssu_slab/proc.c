@@ -660,7 +660,7 @@ ps(void)
 
 //	for( p = ptable.proc; p < &ptable.proc[NPROC]; p++)
 	 
-  for (p = ptable.proc->prev; p != 0 && p != ptable.proc; p = p->prev)
+  for (p = ptable.proc->next; p != 0 && p != ptable.proc; p = p->next)
   {   
     if(p->state >= 0 && p->state < NELEM(states) && states[p->state])
         state = states[p->state];
