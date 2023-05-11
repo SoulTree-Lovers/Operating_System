@@ -7,15 +7,16 @@
 #include "proc.h"
 #include "spinlock.h"
 
-//#define DALLOC
+#define DALLOC
 
-#ifdef DALLOC
+#ifdef DALLOC // 사용
 struct {
   struct spinlock lock;
   struct proc dummy;
   struct proc *proc;
 } ptable;
-#else
+
+#else // 미사용
 struct {
   struct spinlock lock;
   struct proc proc[NPROC];
@@ -33,13 +34,13 @@ static void wakeup1(void *chan);
 void
 pinit(void)
 {
-#ifdef DALLOC
+#ifdef DALLOC // 사용
   ptable.dummy.pid = -1;
   ptable.dummy.state = UNUSED;
   ptable.dummy.prev = 0;
   ptable.dummy.next = 0;
   ptable.proc = &ptable.dummy;
-#else
+#else // 미사용
   memset(ptable.proc, 0, sizeof *ptable.proc);
 #endif
   initlock(&ptable.lock, "ptable");
@@ -97,6 +98,25 @@ allocproc(void)
 
   acquire(&ptable.lock);
 
+  // dynamic allocation
+  p = (struct proc *) kmalloc (sizeof(struct proc));
+
+  if (p==0)
+  {
+	  release(&ptable.lock);
+	  return 0;
+  }
+
+
+  // allocated
+  memset(p, 0, sizeof(struct proc));
+  p->state = EMBRYO;
+  p->pid = nextpid++;
+  p->prev = 0;
+  p->next = 0;
+
+  
+  /* 기존 static 할당
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if(p->state == UNUSED)
       goto found;
@@ -107,6 +127,7 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
+  */
 
   release(&ptable.lock);
 
@@ -166,6 +187,10 @@ userinit(void)
   // writes to be visible, and the lock is also needed
   // because the assignment might not be atomic.
   acquire(&ptable.lock);
+
+
+  ptable.proc->next = ptable.proc->prev = p;
+  p->next = p->prev = ptable.proc;
 
   p->state = RUNNABLE;
 
@@ -233,6 +258,13 @@ fork(void)
 
   acquire(&ptable.lock);
 
+  // 새로운 프로세스 추가
+  np->next = ptable.proc->next;
+  np->prev = ptable.proc;
+
+  ptable.proc->next->prev = np;
+  ptable.proc->next = np;
+
   np->state = RUNNABLE;
 
   release(&ptable.lock);
@@ -270,8 +302,25 @@ exit(void)
 
   // Parent might be sleeping in wait().
   wakeup1(curproc->parent);
+  
+  for (p = ptable.proc->next; p != 0 && p != ptable.proc; p = p->next)
+  {
+    if (p->parent == curproc)
+	{
+	  p->parent = initproc;
 
+	  if (p->state == ZOMBIE)
+	  {
+		wakeup1(initproc);
+//		release(&ptable.lock);
+	  }
+	}
+	cprintf("exit for loop\n");
+  }
+
+  // static for loop
   // Pass abandoned children to init.
+  /*
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->parent == curproc){
       p->parent = initproc;
@@ -279,7 +328,8 @@ exit(void)
         wakeup1(initproc);
     }
   }
-
+  */
+  release(&ptable.lock);
   // Jump into the scheduler, never to return.
   curproc->state = ZOMBIE;
   sched();
@@ -299,6 +349,54 @@ wait(void)
   for(;;){
     // Scan through table looking for exited children.
     havekids = 0;
+	
+	for (p = ptable.proc->next; p != 0 && p != ptable.proc; p = p->next)
+	{
+	  if (p->parent != curproc)
+		continue;
+	  havekids = 1;
+
+	  if (p->state == ZOMBIE)
+	  {
+		pid = p->pid;
+		kfree(p->kstack);
+		p->kstack = 0;
+		freevm(p->pgdir);
+		p->pid = 0;
+		p->parent = 0;
+		p->name[0] = 0;
+		p->killed = 0;
+		p->state = UNUSED;
+		
+		// 추가
+		/*
+		if (p->next != 0)
+		{
+			p->next->prev = p->prev;
+		}
+
+		if (p->prev != 0)
+		{
+			p->prev->next = p->next;
+		}
+		else
+		{
+			ptable.proc->next = p->next;
+		}
+		*/
+
+		//p->next->prev = p->prev;
+		//p->prev->next = p->next;
+
+		release(&ptable.lock);
+		return pid;
+	  }
+	  cprintf("wait for loop\n");
+	}
+
+
+	// static for loop
+	/*
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->parent != curproc)
         continue;
@@ -318,6 +416,7 @@ wait(void)
         return pid;
       }
     }
+	*/
 
     // No point waiting if we don't have any children.
     if(!havekids || curproc->killed){
@@ -351,7 +450,8 @@ scheduler(void)
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    //for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+	for (p = ptable.proc->next; p != 0 && p != ptable.proc; p = p->next){
       if(p->state != RUNNABLE)
         continue;
 
@@ -477,10 +577,25 @@ static void
 wakeup1(void *chan)
 {
   struct proc *p;
+  
+  for (p = ptable.proc->next; p != 0 && p != ptable.proc;  p = p->next)
+  {
+	if (p->state == SLEEPING && p->chan == chan)
+	  p->state = RUNNABLE;
+	  
+	cprintf("wakeup1 for loop\n");
+	cprintf("name: %s\n", p->name);
+//	cprintf("count: %d\n", count);
+  }
 
+  // 찾지 못한 경우
+
+  // static for loop
+  /*
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if(p->state == SLEEPING && p->chan == chan)
       p->state = RUNNABLE;
+  */
 }
 
 // Wake up all processes sleeping on chan.
@@ -501,7 +616,8 @@ kill(int pid)
   struct proc *p;
 
   acquire(&ptable.lock);
-  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+//  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+  for (p = ptable.proc->next; p != 0 && p != ptable.proc; p = p->next){
     if(p->pid == pid){
       p->killed = 1;
       // Wake process from sleep if necessary.
@@ -535,7 +651,9 @@ procdump(void)
   char *state;
   uint pc[10];
 
-  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+ 
+  for (p = ptable.proc->next; p != 0 && p != ptable.proc; p = p->next){
+	//for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->state == UNUSED)
       continue;
     if(p->state >= 0 && p->state < NELEM(states) && states[p->state])
@@ -569,7 +687,9 @@ ps(void)
 
 	acquire(&ptable.lock);
 
-	for( p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+//	for( p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+	 
+	for (p = ptable.proc->next; p != 0 && p != ptable.proc; p = p->next)
 	{   
     	if(p->state >= 0 && p->state < NELEM(states) && states[p->state])
 				state = states[p->state];

@@ -33,7 +33,7 @@ void slabtest(){
 	 * If the VMA is not aligned to the multiple of 4B, then adjust (add/del chars) 
 	 * the literal string in the cprintf function
 	 */
-	cprintf("==== SLAB TEST ====\n");
+	cprintf("====   SLAB TEST   ====\n");
 	
 	slabdump();
 	/* TIPS:
