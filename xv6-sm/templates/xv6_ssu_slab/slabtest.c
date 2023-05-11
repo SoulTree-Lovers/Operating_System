@@ -95,7 +95,7 @@ void slabtest(){
 		int slabsize = 1 << (i+3); 
 		for (int j=0; j < slabsize/sizeof(int); j++)
 		{
-			//cprintf("%d, %d, %d, %d\n", i, j, *(t[i][0]+j), start);		//YOU MAY USE THIS
+//			cprintf("i=%d, j=%d, *(t[i][j]+k)=%d, start=%d\n", i, j, *(t[i][0]+j), start);		//YOU MAY USE THIS
 			if ( *(t[i][0]+j) != start )
 			{
 				pass = 0;
@@ -122,16 +122,15 @@ void slabtest(){
 	/* TEST4: Multiple slabs alloc2 */
 	cprintf("==== TEST4 =====\n");
 	start = counter;
-	for (int i=0; i<NSLAB; i++)
+	for (int i=0; i<NSLAB; i++) // i: 각 slab index
 	{
 		int slabsize = 1 << (i+3); 
-		for (int j=0; j<MAXTEST; j++)
+		for (int j=0; j<MAXTEST; j++) // j: 200개 object 생성
 		{
 			t[i][j]	= (int*) kmalloc (slabsize); 
-			for (int k=0; k<slabsize/sizeof(int); k++)
+			for (int k=0; k<slabsize/sizeof(int); k++) 
 			{
-
-				counter++;
+				counter++; // 총 slab object의 개수 추가
 			}
 		}
 	}
@@ -145,13 +144,20 @@ void slabtest(){
 		{
 			for (int k=0; k<slabsize/sizeof(int); k++)
 			{
+//				for (int l=0; l<slabsize/sizeof(int); l++)
+				cprintf("i=%d, j=%d, *(t[i][j]+k)=%d, start=%d\n", i, j, *(t[i][j]+k), start);
 				if (*(t[i][j]+k) != start)
 				{
 					pass = 0;
+					
+					//cprintf("%d, %d, %d, %d\n", i, j, *(t[i][0]+j), start);		//YOU MAY USE THIS
+					
 					break;
 				}
 				start++;
+				
 			}
+			
 		}
 	}
 
@@ -211,7 +217,7 @@ void slabtest(){
 	{
 		for (int k=0; k<TESTSIZE/sizeof(int); k++)
 		{
-			cprintf("%d, %d, %d, %d\n", j, k, *(t[0][j]+k), start);		//YOU MAY USE THIS
+			//cprintf("%d, %d, %d, %d\n", j, k, *(t[0][j]+k), start);		//YOU MAY USE THIS
 			if (*(t[0][j]+k) != start)
 	
 			{

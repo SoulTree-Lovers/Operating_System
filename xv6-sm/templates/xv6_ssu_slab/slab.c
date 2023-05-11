@@ -40,18 +40,6 @@ unsigned int next_power_of_2(unsigned int n)
 
 	return power;
 
-
-
-//	if (n && !(n & (n - 1)))
-//		return n ;
-
-//	while (n != 0)
-//	{
-//		n >>= 1;
-//		count += 1;
-//	}
-
-//	return 1 << count;
 }
 
 
@@ -147,6 +135,7 @@ char *kmalloc(int size){
 	
 	// 들어갈 object 크기
 	unsigned int required_size = next_power_of_2(size);
+//	cprintf("required size: %d", required_size);
 
 	// 들어갈 적당한 크기의 공간 찾기 (할당량보다 큰 것 중 최소 object) 
 	for (s=stable.slab; s<&stable.slab[NSLAB]; s++)
@@ -156,9 +145,6 @@ char *kmalloc(int size){
 		if (required_size == s->size)
 			break;
 	}
-	
-	
-
 
 	// 빈 공간이 없는 경우 새로운 페이지 추가
 	if (s->num_free_objects == 0)
@@ -179,15 +165,10 @@ char *kmalloc(int size){
 		
 		// 새로운 페이지 할당
 		s->page[s->num_pages] = kalloc();
-
-		// kalloc 실패 시
-//		if (s->page[s->num_pages] == 0)
-//		{
-//			release(&stable.lock);
-//			return 0;
-//		}
-
 		
+		// 페이지 초기화
+		memset(s->page[s->num_pages], 0, PGSIZE);
+	
 		// slab 구조체 변수 수정
 		s->num_pages += 1;
 		s->num_free_objects += s->num_objects_per_page;
@@ -248,72 +229,16 @@ void kmfree(char *addr, int size){ // addr: free할 object의 주소값, size: o
 
 		if (addr == (s->page[page_index] + (page_offset * s->size)))
 		{
-			// 기존 데이터 삭제를 위해 1로 채우기
-			memset(addr, 1, s->size);
+			// 기존 데이터 삭제를 위해 0으로 채우기
+			memset(addr, 0, s->size);
 
 			s->num_free_objects++;
 			s->num_used_objects--;
 
 			// bitmap 초기화
 			clear_bit(s->bitmap, i);
-
-			// free page
-			// int page_num = s->num_pages;
-			// int object_num = s->num_objects_per_page;
-
-			// if (page_num > 1)
-			// {
-			// 	for (int j=0, k=0; j<max_len; j+=object_num, k++)
-			// 	{
-
-			// 		bool is_clean = true;
-
-			// 		for (int l=0; l<object_num; l++)
-			// 		{
-			// 			if (get_bit(s->bitmap, j) == true)
-			// 			{
-			// 				is_clean = false;
-			// 			}
-			// 		}
-					
-			// 		if (is_clean == true)
-			// 		{
-			// 			for (int iter=0; iter<object_num; iter++)
-			// 			{
-			// 				for (int l=j; l<max_len-1; l++)
-			// 				{
-			// 					if (get_bit(s->bitmap, i+1))
-			// 					{
-			// 						set_bit(s->bitmap, i);
-			// 					}
-			// 					else
-			// 					{
-			// 						clear_bit(s->bitmap, i);
-			// 					}
-
-			// 				}
-
-			// 				clear_bit(s->bitmap, max_len-1);
-
-			// 			}
-
-			// 			kfree(s->page[page_index]);
-						
-			// 			for (int l=j; l<page_num-1; l++)
-			// 			{
-			// 				s->page[l] = s->page[l+1];
-			// 			}
-
-			// 			s->num_pages -= 1;
-			// 			s->num_free_objects -= object_num;
-
-			// 			break;
-			// 		}
-			// 	}
-
-			// 	release(&stable.lock);
-			// 	return;
-			// }
+			
+			break;
 		}
 	}
 	release(&stable.lock);
