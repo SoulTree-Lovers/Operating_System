@@ -35,7 +35,7 @@ void slabtest(){
 	 */
 	cprintf("====   SLAB TEST   ====\n");
 	
-	slabdump();
+//	slabdump();
 	/* TIPS:
 	 *	You may debug your result with 
 	 * cprintf();
@@ -49,13 +49,13 @@ void slabtest(){
 	*(t[0][0]) = counter;
 	counter++;
 	
-	slabdump();
+//	slabdump();
 
 	cprintf( (*(t[0][0]) == start && numobj_slab(TESTSLABID) == 1) ? "OK\n":"WRONG\n");
 	kmfree ((char*) t[0][0], TESTSIZE);
 
 	
-	slabdump();
+//	slabdump();
 	
 	/* TEST2: Single slab alloc: the size not equal to a power of 2. */
 	cprintf("==== TEST2 =====\n");
@@ -64,13 +64,13 @@ void slabtest(){
 	*(t[0][0]) = counter;
 	counter++;
 
-	slabdump();
+//	slabdump();
 
 	cprintf( (*(t[0][0]) == start && numobj_slab(TESTSLABID) == 1) ? "OK\n":"WRONG\n");
 	kmfree ((char*) t[0][0], TESTSIZE);
 
 	
-	slabdump();
+//	slabdump();
 
 	/* TEST3: Multiple slabs alloc */
 	cprintf("==== TEST3 =====\n");
@@ -105,7 +105,7 @@ void slabtest(){
 		}
 	}
 
-	slabdump();
+//	slabdump();
 
 	cprintf( pass ? "OK\n" : "WRONG\n");	
 	
@@ -117,7 +117,7 @@ void slabtest(){
 		kmfree((char*) t[i][0], slabsize);
 	}
 
-	slabdump();
+//	slabdump();
 
 	/* TEST4: Multiple slabs alloc2 */
 	cprintf("==== TEST4 =====\n");
@@ -162,7 +162,7 @@ void slabtest(){
 		}
 	}
 
-	slabdump();
+//	slabdump();
 
 	cprintf( pass ? "OK\n" : "WRONG\n");	
 
@@ -173,7 +173,7 @@ void slabtest(){
 			kmfree((char*) t[i][j], slabsize);
 	}
 
-	slabdump();
+//	slabdump();
 
 	/* TEST5: ALLOC MORE THAN 100 PAGES */
 	cprintf("==== TEST5 =====\n");
@@ -190,7 +190,7 @@ void slabtest(){
 	tmp = (int*) kmalloc (TESTSIZE);
 	cprintf( (!tmp && numobj_slab (TESTSLABID) == MAXTEST) ? "OK\n" : "WRONG\n");	
 
-	slabdump();
+//	slabdump();
 
 	/* TEST6: ALLOC AFTER FREE */
 	cprintf("==== TEST6 =====\n");
@@ -210,7 +210,7 @@ void slabtest(){
 		}
 	}
 	
-	slabdump();
+//	slabdump();
 
 	// CHECK 
 	pass = 1;
@@ -232,6 +232,6 @@ void slabtest(){
 	for (int j=0; j<MAXTEST; j++)
 		kmfree((char*) t[0][j], TESTSIZE);
 
-	slabdump();
+//	slabdump();
 }
 
