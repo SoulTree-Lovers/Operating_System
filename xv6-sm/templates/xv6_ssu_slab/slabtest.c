@@ -130,6 +130,7 @@ void slabtest(){
 			t[i][j]	= (int*) kmalloc (slabsize); 
 			for (int k=0; k<slabsize/sizeof(int); k++) 
 			{
+				memmove (t[i][j]+k, &counter, sizeof(int));
 				counter++; // 총 slab object의 개수 추가
 			}
 		}
@@ -145,7 +146,7 @@ void slabtest(){
 			for (int k=0; k<slabsize/sizeof(int); k++)
 			{
 //				for (int l=0; l<slabsize/sizeof(int); l++)
-				cprintf("i=%d, j=%d, *(t[i][j]+k)=%d, start=%d\n", i, j, *(t[i][j]+k), start);
+//				cprintf("i=%d, j=%d, *(t[i][j]+k)=%d, start=%d\n", i, j, *(t[i][j]+k), start);
 				if (*(t[i][j]+k) != start)
 				{
 					pass = 0;
