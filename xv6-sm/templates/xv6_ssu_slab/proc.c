@@ -369,7 +369,10 @@ wait(void)
         // 추가
         p->next->prev = p->prev;
         p->prev->next = p->next;
-
+		
+		// 삭제한 공간 free	
+		kmfree((char *) p, sizeof(struct proc));
+		
         release(&ptable.lock);
         return pid;
         }
