@@ -9,6 +9,8 @@
 #include "mmu.h"
 #include "spinlock.h"
 
+#define COW
+
 void freerange(void *vstart, void *vend);
 extern char end[]; // first address after kernel loaded from ELF file
                    // defined by the kernel linker script in kernel.ld
@@ -16,8 +18,8 @@ extern char end[]; // first address after kernel loaded from ELF file
 struct {
 	struct spinlock lock;
 	int use_lock;
-	int numfreepages;
-	uint ref[PHYSTOP >> PGSHIFT];
+	int numfreepages; // 사용 가능한 free physical frame 개수 
+	uint ref[PHYSTOP >> PGSHIFT]; // 현재 page를 참조하는 프로세스 개수  
 } pmem;
 #endif
 
@@ -81,21 +83,42 @@ int freemem()
 	return numfreepages;
 }
 
+// 수정해야 할 부분들
+// PGSHIFT: 12
 uint
 get_ref(uint pa)
 {
-	return 0;
+	// PHYSTOP 초과 시
+	if (pa > PHYSTOP)
+		panic("PHYSTOP 초과\n");
+	
+	return pmem.ref[pa >> PGSHIFT];
+
 }
 
 void
 inc_ref(uint pa)
 {
+	// PHYSTOP 초과 시
+	if (pa > PHYSTOP)
+		return;
+
+	// reference count 1 증가	
+	pmem.ref[pa >> PGSHIFT]++;
+	
 	return;
 }
 
 void
 dec_ref(uint pa)
 {
+	// PHYSTOP 초과 시
+	if (pa > PHYSTOP)
+		return;
+	
+	// reference count 1 감소	
+	pmem.ref[pa >> PGSHIFT]--;
+	
 	return;
 }
 #endif
@@ -113,6 +136,7 @@ kfree(char *v)
     panic("kfree");
 
   // Fill with junk to catch dangling refs.
+/*
   memset(v, 1, PGSIZE);
 
   if(kmem.use_lock)
@@ -122,14 +146,30 @@ kfree(char *v)
   kmem.freelist = r;
   if(kmem.use_lock)
     release(&kmem.lock);
+*/
+
 #ifdef COW
-	if(pmem.use_lock)
-		acquire(&pmem.lock);
+	uint pa = V2P(v);
 
-	pmem.numfreepages++;
+	if (pmem.ref[pa >> PGSHIFT] > 0)
+		pmem.ref[pa >> PGSHIFT]--;
 
-	if(pmem.use_lock)
-		release(&pmem.lock);
+	if (pmem.ref[pa >> PGSHIFT] == 0)
+	{
+		if (kmem.use_lock)
+			acquire(&kmem.lock);
+	
+		r = (struct run*) v;
+		memset(v, 1, PGSIZE);
+		r->next = kmem.freelist;
+		kmem.freelist = r;
+
+		pmem.numfreepages++;
+
+		if (kmem.use_lock)
+			release(&kmem.lock);
+	}
+
 #endif
 }
 
@@ -143,18 +183,24 @@ kalloc(void)
 
   if(kmem.use_lock)
     acquire(&kmem.lock);
+
   r = kmem.freelist;
+  
   if(r){
     kmem.freelist = r->next;
 
 #ifdef COW
-		if(pmem.use_lock)
-			acquire(&pmem.lock);
+	if(pmem.use_lock)
+		acquire(&pmem.lock);
+	
+	// reference 증가
+	uint pa = V2P((uint) r);
+	pmem.ref[pa >> PGSHIFT]++;
 
-		pmem.numfreepages--;
-
-		if(pmem.use_lock)
-			release(&pmem.lock);
+	pmem.numfreepages--;
+		
+	if(pmem.use_lock)
+		release(&pmem.lock);
 #endif
 	}
   if(kmem.use_lock)

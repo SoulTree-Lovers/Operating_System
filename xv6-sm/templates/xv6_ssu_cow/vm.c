@@ -7,6 +7,9 @@
 #include "proc.h"
 #include "elf.h"
 
+#define COW
+
+
 extern char data[];  // defined by kernel.ld
 pde_t *kpgdir;  // for use in scheduler()
 
@@ -318,7 +321,7 @@ copyuvm(pde_t *pgdir, uint sz)
   pde_t *d;
   pte_t *pte;
   uint pa, i, flags;
-  char *mem;
+
 
   if((d = setupkvm()) == 0)
     return 0;
@@ -329,13 +332,33 @@ copyuvm(pde_t *pgdir, uint sz)
       panic("copyuvm: page not present");
     pa = PTE_ADDR(*pte);
     flags = PTE_FLAGS(*pte);
-    if((mem = kalloc()) == 0)
+  
+	// pte의 쓰기 플래그 해제
+	*pte = *pte & ~PTE_W;
+	flags = PTE_FLAGS(*pte);
+
+	if (mappages(d, (void*) i, PGSIZE, pa, flags) < 0)
+	{
+		goto bad;
+	}
+
+	// reference count 증가
+	inc_ref(pa);
+
+	// TLB flush
+	lcr3(V2P(pgdir));
+
+
+
+	/* 기존 할당 코드
+	if((mem = kalloc()) == 0)
       goto bad;
     memmove(mem, (char*)P2V(pa), PGSIZE);
     if(mappages(d, (void*)i, PGSIZE, V2P(mem), flags) < 0) {
       kfree(mem);
       goto bad;
     }
+	*/
   }
   return d;
 
@@ -389,11 +412,57 @@ copyout(pde_t *pgdir, uint va, void *p, uint len)
 void
 page_fault(void)
 {
-	//uint va = rcr2(); 
+	uint va = rcr2(); 
 
 	// fill this part  
-
 	
+	uint pa;
+	pde_t *pgdir = myproc()->pgdir;
+	pte_t *pte;
+	char *mem;
+
+	// Check valid
+	if (va >= KERNBASE)
+		return;
+	
+	if ((pte = walkpgdir(pgdir, (void*) va, 0)) == 0)
+		return;
+
+	if ((*pte & PTE_P) == 0)
+		return;
+	
+	if ((*pte & PTE_W) == 1)
+		return;
+
+	if ((*pte & PTE_U) == 0)
+		return;
+
+
+	pa = PTE_ADDR(*pte);
+
+
+	// COW
+	if (get_ref(pa) > 1)
+	{
+		if ((mem = kalloc()) == 0)
+			return;
+	
+		// reference count 감소
+		dec_ref(pa);
+
+		memmove(mem, (char*)P2V(pa), PGSIZE);
+
+		// flags와 함께 pte 수정
+		*pte = V2P(mem) | PTE_P | PTE_W | PTE_U;
+		
+	}
+	else
+	{
+		*pte |= PTE_W;
+	}
+
+	lcr3(V2P(pgdir));
+
 	return;
 }
 #endif

@@ -7,6 +7,8 @@
 #include "proc.h"
 #include "spinlock.h"
 
+// #define COW
+
 struct {
   struct spinlock lock;
   struct proc proc[NPROC];
